@@ -1145,26 +1145,50 @@ async function geminiDoctorReply(patientText, patientLangCode) {
 }
 
 let silenceTimer = null;
-const SILENCE_MS = 1800; // 靜音 1.8 秒後才送出
+const SILENCE_MS = 1800;
+
+// 偵測瀏覽器支援度
+function checkBrowserSupport() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    // iOS Chrome / Firefox 不支援
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS) {
+      showBrowserWarning('請用 Safari 開啟此頁面\niOS Chrome 不支援語音辨識');
+    } else {
+      showBrowserWarning('請用 Chrome 或 Safari 開啟此頁面');
+    }
+    return false;
+  }
+  return true;
+}
+
+function showBrowserWarning(msg) {
+  statusText.textContent = msg;
+  statusText.classList.add('show');
+  statusText.style.color = '#ff3b30';
+  statusText.style.whiteSpace = 'pre-line';
+}
 
 function startSTT() {
+  if (!checkBrowserSupport()) return;
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert('請用 Chrome 或 Safari'); return; }
   recognition = new SR();
   recognition.lang = patientLang === 'zh' ? 'zh-TW' : 'en-US';
   recognition.interimResults = true;
-  recognition.continuous = true;  // 持續聆聽，不自動截斷
+  recognition.continuous = false; // iOS 較穩定
+  recognition.maxAlternatives = 1;
   finalTranscript = '';
   clearTimeout(silenceTimer);
 
-  // Show patient caption immediately
   const patientLabel = patientLang === 'zh' ? '患者 · 中文 → 日文' : 'Patient · EN → JA';
   showCaption(patientLabel, 'person-outline');
-  capOriginal.textContent = '…';
+  capOriginal.textContent = '請說話…';
   capTranslation.textContent = '';
 
-  recognition.onstart = () => console.log('✅ STT started');
-  recognition.onaudiostart = () => console.log('🎙 Audio input started');
+  recognition.onstart = () => {
+    capOriginal.textContent = '正在聆聽…';
+  };
 
   recognition.onresult = (e) => {
     clearTimeout(silenceTimer);
@@ -1173,28 +1197,28 @@ function startSTT() {
       if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    capOriginal.textContent = finalTranscript || interim || '…';
+    capOriginal.textContent = finalTranscript || interim || '正在聆聽…';
 
-    // 有講到話後，靜音 1.8 秒才自動送出
     if (finalTranscript.trim() || interim.trim()) {
-      silenceTimer = setTimeout(() => {
-        recognition.stop();
-      }, SILENCE_MS);
+      silenceTimer = setTimeout(() => recognition.stop(), SILENCE_MS);
     }
   };
 
   recognition.onerror = (e) => {
-    console.warn('Speech error:', e.error);
     clearTimeout(silenceTimer);
     if (e.error === 'not-allowed') {
-      alert('請允許麥克風存取權限');
+      autoMode = false;
       setState('idle');
+      showBrowserWarning('⚠️ 請允許麥克風權限\n設定 → Safari → 麥克風 → 允許');
     } else if (e.error === 'no-speech') {
-      // 沒偵測到聲音，繼續等待
+      // iOS 常見：沒偵測到聲音，自動重啟
+      if (autoMode) setTimeout(() => startSTT(), 300);
     } else if (e.error === 'aborted') {
-      // 被中斷，靜默處理
+      // 手動停止，不處理
+    } else if (e.error === 'network') {
+      if (autoMode) setTimeout(() => startSTT(), 1000);
     } else {
-      setState('idle');
+      if (autoMode) setTimeout(() => startSTT(), 500);
     }
   };
 
