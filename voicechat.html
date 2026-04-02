@@ -1245,20 +1245,51 @@ function startSTT() {
   recognition.start();
 }
 
+// iOS Safari 需要在使用者手勢中解鎖 speechSynthesis
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !window.speechSynthesis) return;
+  const silent = new SpeechSynthesisUtterance('');
+  silent.volume = 0;
+  speechSynthesis.speak(silent);
+  speechUnlocked = true;
+}
+
 function speakText(text, lang, cb) {
   if (!window.speechSynthesis) { cb?.(); return; }
   speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = lang; utt.rate = 0.93; utt.pitch = 1.05;
-  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith(lang.split('-')[0]) && v.localService);
+  utt.lang = lang;
+  utt.rate = 0.93;
+  utt.pitch = 1.05;
+
+  // 不限定 localService，讓 iOS 使用預設語音
+  const voices = speechSynthesis.getVoices();
+  const v = voices.find(v => v.lang.startsWith(lang.split('-')[0]));
   if (v) utt.voice = v;
-  utt.onend = () => { ampTarget = 0.0; cb?.(); };
+
+  // iOS 有時 onend 不觸發，加保底 timeout
+  let ended = false;
+  const finish = () => {
+    if (ended) return;
+    ended = true;
+    ampTarget = 0.0;
+    cb?.();
+  };
+  utt.onend = finish;
+  utt.onerror = finish;
+
+  // 保底：語音長度 * 100ms 後強制繼續
+  const fallback = Math.max(3000, text.length * 120);
+  setTimeout(finish, fallback);
+
   speechSynthesis.speak(utt);
 }
 
 async function toggleMic() {
   if (!autoMode) {
     // 開始自動問診模式
+    unlockSpeech(); // iOS 解鎖必須在使用者手勢內執行
     autoMode = true;
     speechSynthesis.cancel();
     setState('listening');
