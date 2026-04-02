@@ -885,7 +885,7 @@ function setState(s) {
     setMicIcon('mic-outline');
     micBtn.classList.remove('recording');
     resetCaption();
-    statusText.textContent = '輕觸麥克風開始對話';
+    statusText.textContent = autoMode ? '請說話…' : '輕觸麥克風開始問診';
     statusText.classList.add('show');
   } else if (s === 'listening') {
     ampTarget = 0.4;
@@ -965,6 +965,7 @@ function toggleMute() {
 // Conversation log
 // ============================================================
 let conversationLog = [];
+let autoMode = false; // 自動循環模式
 
 // ============================================================
 // End consultation + SOAP
@@ -974,6 +975,8 @@ async function endConsultation() {
     alert('尚未有對話記錄，請先開始對話。');
     return;
   }
+  autoMode = false;
+  clearTimeout(silenceTimer);
   recognition?.stop();
   speechSynthesis.cancel();
   setState('idle');
@@ -1197,7 +1200,12 @@ function startSTT() {
 
   recognition.onend = async () => {
     const text = finalTranscript.trim();
-    if (!text) { setState('idle'); return; }
+    if (!text) {
+      // 沒講話 → 如果是自動模式繼續聆聽，否則回 idle
+      if (autoMode) { await new Promise(r => setTimeout(r, 300)); startSTT(); }
+      else setState('idle');
+      return;
+    }
     setState('processing');
 
     // 1. 即時翻譯病患說的話 → 日文（給醫師看）
@@ -1205,7 +1213,7 @@ function startSTT() {
     await typeText(capTranslation, jaText, 24);
     conversationLog.push({ role: 'patient', original: text, translated: jaText });
 
-    // 2. Gemini 生成醫師日文回應
+    // 2. 生成醫師日文回應
     setState('speaking');
     await new Promise(r => setTimeout(r, 400));
     const doctorJa = await geminiDoctorReply(text, patientLang);
@@ -1220,8 +1228,18 @@ function startSTT() {
     await new Promise(r => setTimeout(r, 150));
     await typeText(capTranslation, doctorTranslated, 28);
 
-    if (!isMuted) speakText(doctorJa, 'ja-JP', () => setState('idle'));
-    else setState('idle');
+    const afterDoctor = async () => {
+      if (autoMode) {
+        // 自動循環：醫師講完後繼續等患者
+        await new Promise(r => setTimeout(r, 600));
+        if (autoMode) startSTT();
+      } else {
+        setState('idle');
+      }
+    };
+
+    if (!isMuted) speakText(doctorJa, 'ja-JP', afterDoctor);
+    else afterDoctor();
   };
 
   recognition.start();
@@ -1239,16 +1257,22 @@ function speakText(text, lang, cb) {
 }
 
 async function toggleMic() {
-  if (state === 'idle' || state === 'speaking') {
+  if (!autoMode) {
+    // 開始自動問診模式
+    autoMode = true;
     speechSynthesis.cancel();
     setState('listening');
     startSTT();
     setTimeout(async () => {
       if (state === 'listening' && !audioCtx) await startMicAnalyser();
     }, 800);
-  } else if (state === 'listening') {
+  } else {
+    // 停止自動模式
+    autoMode = false;
     clearTimeout(silenceTimer);
     recognition?.stop();
+    speechSynthesis.cancel();
+    setState('idle');
   }
 }
 
