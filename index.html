@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>語音動態效果選擇</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 40px 20px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #86868b;
+    margin-bottom: 48px;
+    font-size: 15px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .card {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 24px;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .card-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1d1d1f;
+  }
+  .card-label {
+    font-size: 12px;
+    color: #86868b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .demo-area {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #f5f5f7;
+    overflow: hidden;
+    position: relative;
+  }
+  .btn {
+    padding: 10px 24px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: #0071e3;
+    color: white;
+  }
+  .btn-primary:hover { background: #0077ed; }
+  .btn-stop {
+    background: #ff3b30;
+    color: white;
+  }
+
+  /* === 1. SIRI WAVE === */
+  #siriCanvas { width: 100%; height: 120px; }
+
+  /* === 2. BAR WAVEFORM === */
+  .bars {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 80px;
+  }
+  .bar {
+    width: 4px;
+    border-radius: 2px;
+    background: #0071e3;
+    transition: height 0.1s ease;
+    min-height: 4px;
+  }
+
+  /* === 3. ORB === */
+  .orb {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #5e5ce6, #0071e3, #30d158);
+    box-shadow: 0 0 40px rgba(0,113,227,0.4);
+    animation: orbIdle 3s ease-in-out infinite;
+  }
+  @keyframes orbIdle {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,113,227,0.3); }
+    50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(0,113,227,0.5); }
+  }
+  .orb.speaking {
+    animation: orbSpeak 0.3s ease-in-out infinite alternate;
+  }
+  @keyframes orbSpeak {
+    from { transform: scale(0.92); box-shadow: 0 0 20px rgba(0,113,227,0.3); }
+    to   { transform: scale(1.12); box-shadow: 0 0 80px rgba(0,113,227,0.7); }
+  }
+
+  /* === 4. MINIMAL PULSE === */
+  .pulse-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #1d1d1f;
+    position: relative;
+    animation: dotBreath 2.5s ease-in-out infinite;
+  }
+  @keyframes dotBreath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  .pulse-dot::before,
+  .pulse-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(29,29,31,0.15);
+    animation: pulseRing 2.5s ease-out infinite;
+  }
+  .pulse-dot::after { animation-delay: 1.25s; }
+  @keyframes pulseRing {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(3.5); opacity: 0; }
+  }
+  .pulse-dot.speaking {
+    animation: dotSpeak 0.4s ease-in-out infinite alternate;
+  }
+  @keyframes dotSpeak {
+    from { transform: scale(1); background: #1d1d1f; }
+    to   { transform: scale(1.4); background: #0071e3; }
+  }
+
+  /* === 5. ELEVENLABS STYLE - thin lines === */
+  .thin-bars {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    height: 60px;
+  }
+  .thin-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: #1d1d1f;
+    height: 4px;
+    transition: height 0.08s ease;
+  }
+
+  /* === 6. CIRCLE WAVEFORM === */
+  #circleCanvas { width: 120px; height: 120px; }
+
+</style>
+</head>
+<body>
+
+<h1>語音動態效果</h1>
+<p class="subtitle">點擊「播放」看效果，選你喜歡的風格</p>
+
+<div class="grid">
+
+  <!-- 1. Siri Wave -->
+  <div class="card">
+    <div class="card-label">風格 1</div>
+    <div class="card-title">Siri 波浪</div>
+    <div class="demo-area" style="background:#000">
+      <canvas id="siriCanvas"></canvas>
+    </div>
+    <button class="btn btn-primary" onclick="toggleSiri(this)">▶ 播放</button>
+  </div>
+
+  <!-- 2. Bar Waveform -->
+  <div class="card">
+    <div class="card-label">風格 2</div>
+    <div class="card-title">聲波條形</div>
+    <div class="demo-area">
+      <div class="bars" id="bars"></div>
+    </div>
+    <button class="btn btn-primary" onclick="toggleBars(this)">▶ 播放</button>
+  </div>
+
+  <!-- 3. Orb -->
+  <div class="card">
+    <div class="card-label">風格 3</div>
+    <div class="card-title">ChatGPT Orb 球體</div>
+    <div class="demo-area" style="background:#1d1d1f">
+      <div class="orb" id="orb"></div>
+    </div>
+    <button class="btn btn-primary" onclick="toggleOrb(this)">▶ 播放</button>
+  </div>
+
+  <!-- 4. Minimal Pulse -->
+  <div class="card">
+    <div class="card-label">風格 4</div>
+    <div class="card-title">極簡脈衝（Perplexity 風）</div>
+    <div class="demo-area">
+      <div class="pulse-dot" id="pulseDot"></div>
+    </div>
+    <button class="btn btn-primary" onclick="togglePulse(this)">▶ 播放</button>
+  </div>
+
+  <!-- 5. ElevenLabs Thin Lines -->
+  <div class="card">
+    <div class="card-label">風格 5</div>
+    <div class="card-title">細線脈衝（ElevenLabs 風）</div>
+    <div class="demo-area">
+      <div class="thin-bars" id="thinBars"></div>
+    </div>
+    <button class="btn btn-primary" onclick="toggleThin(this)">▶ 播放</button>
+  </div>
+
+  <!-- 6. Circle Waveform -->
+  <div class="card">
+    <div class="card-label">風格 6</div>
+    <div class="card-title">圓形聲波</div>
+    <div class="demo-area">
+      <canvas id="circleCanvas" width="120" height="120"></canvas>
+    </div>
+    <button class="btn btn-primary" onclick="toggleCircle(this)">▶ 播放</button>
+  </div>
+
+</div>
+
+<script>
+// ============ 1. SIRI WAVE ============
+const siriCanvas = document.getElementById('siriCanvas');
+const siriCtx = siriCanvas.getContext('2d');
+let siriRunning = false;
+let siriAnim;
+
+function resizeSiri() {
+  siriCanvas.width = siriCanvas.offsetWidth;
+  siriCanvas.height = siriCanvas.offsetHeight;
+}
+resizeSiri();
+
+function drawSiriWave(t, amp) {
+  const w = siriCanvas.width, h = siriCanvas.height;
+  siriCtx.clearRect(0, 0, w, h);
+  const waves = [
+    { color: 'rgba(0,120,255,0.8)', freq: 0.8, offset: 0, amp: amp },
+    { color: 'rgba(120,0,255,0.6)', freq: 1.2, offset: 1, amp: amp * 0.7 },
+    { color: 'rgba(0,200,255,0.5)', freq: 0.5, offset: 2, amp: amp * 0.5 },
+    { color: 'rgba(255,50,150,0.4)', freq: 1.8, offset: 3, amp: amp * 0.4 },
+  ];
+  waves.forEach(wave => {
+    siriCtx.beginPath();
+    siriCtx.moveTo(0, h / 2);
+    for (let x = 0; x < w; x++) {
+      const y = h / 2 + Math.sin(x * wave.freq * 0.02 + t + wave.offset) * wave.amp
+                       + Math.sin(x * wave.freq * 0.04 + t * 1.3 + wave.offset) * wave.amp * 0.4;
+      x === 0 ? siriCtx.moveTo(x, y) : siriCtx.lineTo(x, y);
+    }
+    siriCtx.strokeStyle = wave.color;
+    siriCtx.lineWidth = 2.5;
+    siriCtx.stroke();
+  });
+}
+
+let siriT = 0;
+let siriAmpTarget = 8;
+let siriAmpCurrent = 8;
+function animateSiri() {
+  siriT += 0.04;
+  siriAmpCurrent += (siriAmpTarget - siriAmpCurrent) * 0.1;
+  drawSiriWave(siriT, siriAmpCurrent);
+  siriAnim = requestAnimationFrame(animateSiri);
+}
+
+function toggleSiri(btn) {
+  if (!siriRunning) {
+    siriRunning = true;
+    siriAmpTarget = 28;
+    animateSiri();
+    btn.textContent = '⏹ 停止';
+    btn.className = 'btn btn-stop';
+  } else {
+    siriRunning = false;
+    siriAmpTarget = 8;
+    setTimeout(() => { cancelAnimationFrame(siriAnim); drawSiriWave(siriT, 4); }, 800);
+    btn.textContent = '▶ 播放';
+    btn.className = 'btn btn-primary';
+  }
+}
+drawSiriWave(0, 8);
+
+// ============ 2. BAR WAVEFORM ============
+const barsEl = document.getElementById('bars');
+const barCount = 28;
+let barsRunning = false;
+let barsAnim;
+const barEls = [];
+for (let i = 0; i < barCount; i++) {
+  const b = document.createElement('div');
+  b.className = 'bar';
+  b.style.height = '4px';
+  barsEl.appendChild(b);
+  barEls.push(b);
+}
+function animateBars() {
+  barEls.forEach((b, i) => {
+    const h = 4 + Math.random() * 60;
+    b.style.height = h + 'px';
+    b.style.opacity = 0.5 + (h / 64) * 0.5;
+  });
+  barsAnim = setTimeout(animateBars, 80);
+}
+function toggleBars(btn) {
+  if (!barsRunning) {
+    barsRunning = true;
+    animateBars();
+    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  } else {
+    barsRunning = false;
+    clearTimeout(barsAnim);
+    barEls.forEach(b => { b.style.height = '4px'; });
+    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+  }
+}
+
+// ============ 3. ORB ============
+const orbEl = document.getElementById('orb');
+let orbRunning = false;
+function toggleOrb(btn) {
+  if (!orbRunning) {
+    orbRunning = true;
+    orbEl.classList.add('speaking');
+    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  } else {
+    orbRunning = false;
+    orbEl.classList.remove('speaking');
+    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+  }
+}
+
+// ============ 4. PULSE ============
+const pulseDotEl = document.getElementById('pulseDot');
+let pulseRunning = false;
+function togglePulse(btn) {
+  if (!pulseRunning) {
+    pulseRunning = true;
+    pulseDotEl.classList.add('speaking');
+    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  } else {
+    pulseRunning = false;
+    pulseDotEl.classList.remove('speaking');
+    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+  }
+}
+
+// ============ 5. THIN BARS (ElevenLabs) ============
+const thinBarsEl = document.getElementById('thinBars');
+const thinCount = 32;
+let thinRunning = false;
+let thinAnim;
+const thinEls = [];
+for (let i = 0; i < thinCount; i++) {
+  const b = document.createElement('div');
+  b.className = 'thin-bar';
+  thinBarsEl.appendChild(b);
+  thinEls.push(b);
+}
+let thinT = 0;
+function animateThin() {
+  thinT += 0.08;
+  thinEls.forEach((b, i) => {
+    const wave = Math.sin(thinT + i * 0.4) * 0.5 + 0.5;
+    const h = 3 + wave * 45;
+    b.style.height = h + 'px';
+  });
+  thinAnim = requestAnimationFrame(animateThin);
+}
+function toggleThin(btn) {
+  if (!thinRunning) {
+    thinRunning = true;
+    animateThin();
+    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  } else {
+    thinRunning = false;
+    cancelAnimationFrame(thinAnim);
+    thinEls.forEach(b => { b.style.height = '3px'; });
+    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+  }
+}
+
+// ============ 6. CIRCLE WAVEFORM ============
+const circleCanvas = document.getElementById('circleCanvas');
+const circleCtx = circleCanvas.getContext('2d');
+let circleRunning = false;
+let circleAnim;
+let circleT = 0;
+let circleAmp = 0;
+function drawCircle(amp) {
+  const w = 120, h = 120, cx = 60, cy = 60, r = 35;
+  circleCtx.clearRect(0, 0, w, h);
+  // outer glow
+  if (amp > 2) {
+    const grad = circleCtx.createRadialGradient(cx, cy, r, cx, cy, r + amp + 10);
+    grad.addColorStop(0, 'rgba(0,113,227,0.3)');
+    grad.addColorStop(1, 'rgba(0,113,227,0)');
+    circleCtx.beginPath();
+    circleCtx.arc(cx, cy, r + amp + 10, 0, Math.PI * 2);
+    circleCtx.fillStyle = grad;
+    circleCtx.fill();
+  }
+  // waveform circle
+  const points = 80;
+  circleCtx.beginPath();
+  for (let i = 0; i <= points; i++) {
+    const angle = (i / points) * Math.PI * 2;
+    const noise = Math.sin(angle * 4 + circleT) * amp * 0.5
+                + Math.sin(angle * 7 + circleT * 1.5) * amp * 0.3;
+    const rr = r + noise;
+    const x = cx + Math.cos(angle) * rr;
+    const y = cy + Math.sin(angle) * rr;
+    i === 0 ? circleCtx.moveTo(x, y) : circleCtx.lineTo(x, y);
+  }
+  circleCtx.closePath();
+  circleCtx.strokeStyle = '#0071e3';
+  circleCtx.lineWidth = 2;
+  circleCtx.stroke();
+  circleCtx.fillStyle = 'rgba(0,113,227,0.08)';
+  circleCtx.fill();
+}
+function animateCircle() {
+  circleT += 0.05;
+  drawCircle(circleAmp);
+  circleAnim = requestAnimationFrame(animateCircle);
+}
+function toggleCircle(btn) {
+  if (!circleRunning) {
+    circleRunning = true;
+    circleAmp = 12;
+    animateCircle();
+    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  } else {
+    circleRunning = false;
+    circleAmp = 0;
+    setTimeout(() => { cancelAnimationFrame(circleAnim); drawCircle(0); }, 500);
+    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+  }
+}
+drawCircle(0);
+</script>
+</body>
+</html>

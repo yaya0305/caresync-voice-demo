@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>球體風格選擇</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #f5f5f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    padding: 40px 20px 60px;
+  }
+  h1 { text-align:center; font-size:26px; font-weight:600; color:#1d1d1f; margin-bottom:6px; }
+  .sub { text-align:center; color:#86868b; font-size:14px; margin-bottom:40px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 20px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2.5px solid transparent;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+  .card.selected { border-color: #0071e3; }
+  .card-dark { background: #0d0d12; }
+  .card-dark .card-name { color: #f0f0f5; }
+  .card-dark .card-desc { color: #888; }
+  .card-name { font-size:16px; font-weight:600; color:#1d1d1f; }
+  .card-desc { font-size:13px; color:#86868b; text-align:center; line-height:1.5; }
+  .orb-container { position:relative; }
+  canvas { display:block; }
+  .choose-btn {
+    display:block; margin:32px auto 0;
+    padding:14px 48px; background:#0071e3; color:white;
+    border:none; border-radius:999px; font-size:16px;
+    font-weight:500; font-family:inherit; cursor:pointer;
+  }
+  .choose-btn:hover { background:#0077ed; }
+</style>
+</head>
+<body>
+<h1>選擇球體風格</h1>
+<p class="sub">點擊卡片選擇，所有動畫即時渲染</p>
+
+<div class="grid">
+  <div class="card selected" id="card1" onclick="selectCard(1)">
+    <canvas id="c1" width="180" height="180" style="border-radius:50%"></canvas>
+    <div class="card-name">🌊 藍白旋渦</div>
+    <div class="card-desc">深藍冰白旋轉<br>3D 玻璃光澤感</div>
+  </div>
+  <div class="card" id="card2" onclick="selectCard(2)">
+    <canvas id="c2" width="180" height="180" style="border-radius:50%"></canvas>
+    <div class="card-name">🫧 虹彩泡泡</div>
+    <div class="card-desc">透明玻璃折射<br>輕盈夢幻感</div>
+  </div>
+  <div class="card" id="card3" onclick="selectCard(3)">
+    <canvas id="c3" width="180" height="180" style="border-radius:50%"></canvas>
+    <div class="card-name">🌸 粉霧水彩</div>
+    <div class="card-desc">玫瑰粉薰衣草<br>溫柔療癒感</div>
+  </div>
+  <div class="card card-dark" id="card4" onclick="selectCard(4)">
+    <canvas id="c4" width="180" height="72" style="border-radius:16px"></canvas>
+    <div class="card-name">🎵 Siri 彩波</div>
+    <div class="card-desc">紫藍青白流動<br>黑底高科技感</div>
+  </div>
+  <div class="card card-dark" id="card5" onclick="selectCard(5)">
+    <canvas id="c5" width="180" height="180" style="border-radius:50%"></canvas>
+    <div class="card-name">✨ 星光玻璃球</div>
+    <div class="card-desc">藍紫玻璃四芒星<br>神秘科技感</div>
+  </div>
+</div>
+<button class="choose-btn" onclick="confirmChoice()">✓ 使用此風格</button>
+
+<script>
+let selectedCard = 1;
+function selectCard(n) {
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('card'+n).classList.add('selected');
+  selectedCard = n;
+}
+function confirmChoice() {
+  const names = {1:'藍白旋渦',2:'虹彩泡泡',3:'粉霧水彩',4:'Siri彩波',5:'星光玻璃球'};
+  alert('選擇：' + names[selectedCard] + '\n告訴我，我立刻換上去！');
+}
+
+/* ── shared WebGL setup ──────────────────────────────── */
+function initGL(id, fragSrc, bgR, bgG, bgB) {
+  const canvas = document.getElementById(id);
+  const gl = canvas.getContext('webgl', {alpha: true, premultipliedAlpha: false});
+  if (!gl) { console.error('WebGL not available for', id); return null; }
+
+  const vertSrc = `
+    attribute vec2 a_pos;
+    varying vec2 v_uv;
+    void main() { v_uv = a_pos; gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
+
+  function compileShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error('Shader error on', id, ':', gl.getShaderInfoLog(s));
+      return null;
+    }
+    return s;
+  }
+
+  const vs = compileShader(gl.VERTEX_SHADER, vertSrc);
+  const fs = compileShader(gl.FRAGMENT_SHADER, fragSrc);
+  if (!vs || !fs) return null;
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, vs);
+  gl.attachShader(prog, fs);
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    console.error('Link error on', id, ':', gl.getProgramInfoLog(prog));
+    return null;
+  }
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+  return { gl, prog, w: canvas.width, h: canvas.height, bgR: bgR||0, bgG: bgG||0, bgB: bgB||0 };
+}
+
+function runGL(ctx, fragCallback) {
+  if (!ctx) return;
+  const { gl, prog, w, h } = ctx;
+  const uT = gl.getUniformLocation(prog, 'u_time');
+  function loop(ms) {
+    gl.viewport(0, 0, w, h);
+    gl.clearColor(ctx.bgR, ctx.bgG, ctx.bgB, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform1f(uT, ms * 0.001);
+    if (fragCallback) fragCallback(gl, prog, ms);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ── 1. 藍白旋渦 ──────────────────────────────────────── */
+runGL(initGL('c1', `
+  precision highp float;
+  varying vec2 v_uv;
+  uniform float u_time;
+
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i+vec2(1,0)), f.x),
+               mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.1 + vec2(1.7, 9.2); a *= 0.5; }
+    return v;
+  }
+  vec2 swirl(vec2 p, float s) {
+    float angle = s * (1.0 - length(p));
+    return vec2(cos(angle)*p.x - sin(angle)*p.y, sin(angle)*p.x + cos(angle)*p.y);
+  }
+  void main() {
+    vec2 p = v_uv;
+    float r = length(p);
+    float mask = 1.0 - smoothstep(0.82, 1.0, r);
+    if (mask < 0.01) { gl_FragColor = vec4(0.0); return; }
+    vec3 norm = normalize(vec3(p, sqrt(max(0.0, 1.0 - dot(p,p)))));
+    vec3 light = normalize(vec3(-0.5, 0.8, 1.2));
+    float diff = max(dot(norm, light), 0.0);
+    vec2 sw = swirl(p, 2.8 + sin(u_time * 0.4) * 0.3);
+    sw += vec2(sin(u_time * 0.3) * 0.1, cos(u_time * 0.25) * 0.08);
+    float pat = fbm(sw * 2.2 + u_time * 0.18) * 0.6 + fbm(sw * 3.5 - u_time * 0.12 + 2.3) * 0.4;
+    vec3 col = mix(vec3(0.15, 0.45, 0.92), vec3(0.42, 0.75, 0.98), smoothstep(0.0, 0.4, pat));
+    col = mix(col, vec3(0.82, 0.93, 1.0), smoothstep(0.4, 0.75, pat));
+    col *= 0.5 + diff * 0.7;
+    float spec = pow(max(dot(norm, normalize(light + vec3(0,0,1))), 0.0), 28.0);
+    col += spec * 0.65 * vec3(0.9, 0.96, 1.0);
+    float fresnel = pow(1.0 - max(dot(norm, vec3(0,0,1)), 0.0), 3.5);
+    col += fresnel * vec3(0.3, 0.65, 1.0) * 0.5;
+    gl_FragColor = vec4(col, smoothstep(1.0, 0.75, r) * mask);
+  }
+`, 0.96, 0.97, 1.0));
+
+/* ── 2. 虹彩泡泡 ──────────────────────────────────────── */
+runGL(initGL('c2', `
+  precision highp float;
+  varying vec2 v_uv;
+  uniform float u_time;
+  void main() {
+    vec2 p = v_uv;
+    float r = length(p);
+    if (r > 1.0) { gl_FragColor = vec4(0.0); return; }
+    vec3 norm = normalize(vec3(p, sqrt(max(0.0, 1.0 - dot(p,p)))));
+    float film = norm.z + sin(norm.x * 4.0 + u_time * 0.5) * 0.3 + cos(norm.y * 3.0 - u_time * 0.4) * 0.3;
+    float m1 = sin(film * 3.14159 + u_time * 0.3) * 0.5 + 0.5;
+    float m2 = cos(film * 2.718 - u_time * 0.2) * 0.5 + 0.5;
+    vec3 col = mix(
+      mix(vec3(0.6, 0.85, 1.0), vec3(0.8, 0.6, 1.0), m1),
+      mix(vec3(0.5, 1.0, 0.85), vec3(1.0, 0.75, 0.9), m2),
+      0.5
+    );
+    float fresnel = pow(1.0 - norm.z, 2.5);
+    col = mix(col, vec3(1.0), fresnel * 0.7);
+    float spec = pow(max(dot(norm, normalize(vec3(-0.6, 0.7, 1.0) + vec3(0,0,1))), 0.0), 40.0);
+    col += spec * 0.9;
+    float band = smoothstep(0.04, 0.0, abs(dot(norm, vec3(0,0,1)) - 0.25)) * 0.5;
+    col += band * vec3(0.9, 0.95, 1.0);
+    float alpha = mix(0.15, 0.9, fresnel) + 0.25;
+    gl_FragColor = vec4(col * alpha, alpha * smoothstep(1.0, 0.8, r));
+  }
+`, 0.95, 0.97, 1.0));
+
+/* ── 3. 粉霧水彩 ──────────────────────────────────────── */
+runGL(initGL('c3', `
+  precision highp float;
+  varying vec2 v_uv;
+  uniform float u_time;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.1 + vec2(1.7, 9.2); a *= 0.5; }
+    return v;
+  }
+  void main() {
+    vec2 p = v_uv;
+    float r = length(p);
+    float mask = 1.0 - smoothstep(0.88, 1.0, r);
+    if (mask < 0.01) { gl_FragColor = vec4(0.0); return; }
+    vec3 norm = normalize(vec3(p, sqrt(max(0.0, 1.0 - dot(p,p)))));
+    float n1 = fbm(p * 1.8 + u_time * 0.12 + vec2(1.3, 0.7));
+    float n2 = fbm(p * 2.5 - u_time * 0.09 + vec2(-0.5, 1.2));
+    float pat = n1 * 0.6 + n2 * 0.4;
+    vec3 col = mix(vec3(1.0, 0.55, 0.65), vec3(1.0, 0.7, 0.82), smoothstep(0.3, 0.6, pat));
+    col = mix(col, vec3(0.82, 0.6, 0.95), smoothstep(0.6, 0.8, pat));
+    col = mix(col, vec3(1.0, 0.95, 0.97), smoothstep(0.8, 1.0, pat));
+    float diff = max(dot(norm, normalize(vec3(-0.4, 0.6, 1.0))), 0.0);
+    col = col * 0.5 + col * diff * 0.6;
+    float spec = pow(max(dot(norm, normalize(vec3(-0.4, 0.6, 1.0) + vec3(0,0,1))), 0.0), 20.0) * 0.4;
+    col += spec * vec3(1.0, 0.9, 0.95);
+    float fresnel = pow(1.0 - norm.z, 2.0);
+    col += fresnel * vec3(0.9, 0.5, 0.7) * 0.3;
+    gl_FragColor = vec4(col, smoothstep(1.0, 0.78, r) * mask * (0.75 + pat * 0.25));
+  }
+`, 1.0, 1.0, 1.0));
+
+/* ── 4. Siri 彩波 (Canvas2D) ─────────────────────────── */
+(function() {
+  const canvas = document.getElementById('c4');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const waves = [
+    {hue:270, speed:1.0, freq:0.030, off:0.0,  amp:20},
+    {hue:220, speed:1.3, freq:0.022, off:1.5,  amp:16},
+    {hue:185, speed:0.8, freq:0.038, off:3.0,  amp:13},
+    {hue:300, speed:1.6, freq:0.026, off:4.5,  amp:10},
+    {hue:195, speed:0.6, freq:0.018, off:6.0,  amp: 8},
+  ];
+  function loop(ms) {
+    ctx.fillStyle = '#0d0d12';
+    ctx.fillRect(0, 0, W, H);
+    const t = ms * 0.001;
+    waves.forEach(w => {
+      ctx.beginPath();
+      for (let x = 0; x <= W; x++) {
+        const y = H/2
+          + Math.sin(x * w.freq + t * w.speed + w.off) * w.amp
+          + Math.sin(x * w.freq * 1.7 - t * w.speed * 0.8 + w.off + 1) * w.amp * 0.35;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      const g = ctx.createLinearGradient(0, 0, W, 0);
+      g.addColorStop(0,   `hsla(${w.hue},100%,65%,0)`);
+      g.addColorStop(0.2, `hsla(${w.hue},100%,70%,0.85)`);
+      g.addColorStop(0.5, `hsla(${w.hue+30},100%,80%,0.95)`);
+      g.addColorStop(0.8, `hsla(${w.hue+60},100%,70%,0.85)`);
+      g.addColorStop(1,   `hsla(${w.hue+60},100%,65%,0)`);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    });
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+
+/* ── 5. 星光玻璃球 ────────────────────────────────────── */
+runGL(initGL('c5', `
+  precision highp float;
+  varying vec2 v_uv;
+  uniform float u_time;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float noise(vec2 p) {
+    vec2 i = floor(p); vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0; float a = 0.5;
+    for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.0 + vec2(1.7, 9.2); a *= 0.5; }
+    return v;
+  }
+  void main() {
+    vec2 p = v_uv;
+    float r = length(p);
+    float mask = 1.0 - smoothstep(0.85, 1.0, r);
+    if (mask < 0.01) { gl_FragColor = vec4(0.0); return; }
+    vec3 norm = normalize(vec3(p, sqrt(max(0.0, 1.0 - dot(p,p)))));
+    float fresnel = pow(1.0 - norm.z, 2.2);
+    float n = fbm(p * 2.0 + u_time * 0.1);
+    vec3 col = mix(vec3(0.1, 0.2, 0.8), vec3(0.4, 0.2, 0.9), n);
+    col = mix(col, vec3(0.2, 0.7, 1.0), fresnel * 0.5);
+    col = mix(col, vec3(0.7, 0.8, 1.0), fresnel * 0.4);
+    float diff = max(dot(norm, normalize(vec3(-0.5, 0.7, 1.2))), 0.0);
+    col *= 0.4 + diff * 0.8;
+    float spec = pow(max(dot(norm, normalize(normalize(vec3(-0.5,0.7,1.2)) + vec3(0,0,1))), 0.0), 35.0) * 0.7;
+    col += spec * vec3(0.9, 0.95, 1.0);
+    // 4-pointed star
+    vec2 ap = abs(p);
+    float star = max(ap.x, ap.y) - 0.06 - min(ap.x, ap.y) * 0.5;
+    float starMask = smoothstep(0.02, 0.0, star);
+    float starGlow = smoothstep(0.22, 0.0, star) * 0.5;
+    col = mix(col, vec3(1.0), starGlow + starMask);
+    // lens cross arms
+    float armX = exp(-abs(p.y) * 18.0) * exp(-abs(p.x) * 3.0) * 0.4;
+    float armY = exp(-abs(p.x) * 18.0) * exp(-abs(p.y) * 3.0) * 0.4;
+    col += (armX + armY) * vec3(0.7, 0.85, 1.0);
+    // top-left highlight
+    float hl = exp(-dot(p - vec2(-0.2, 0.3), p - vec2(-0.2, 0.3)) * 25.0) * 0.5;
+    col += hl * vec3(1.0);
+    gl_FragColor = vec4(col, smoothstep(1.0, 0.78, r) * mask);
+  }
+`, 0.05, 0.05, 0.08));
+</script>
+</body>
+</html>

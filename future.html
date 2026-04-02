@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>CareSync AI</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: #050810;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; overflow: hidden;
+}
+
+/* ── Phone ── */
+.phone {
+  width: 390px; height: 844px;
+  background: linear-gradient(160deg, #080c18 0%, #060910 60%, #0a0618 100%);
+  border-radius: 52px;
+  border: 1px solid rgba(80,120,255,0.2);
+  box-shadow:
+    0 0 0 1px rgba(60,100,255,0.1),
+    0 0 80px rgba(60,100,255,0.08),
+    0 40px 120px rgba(0,0,0,0.8);
+  display: flex; flex-direction: column; overflow: hidden;
+  position: relative;
+}
+
+/* Background aurora */
+.aurora {
+  position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 20%, rgba(60,80,200,0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 80% 70%, rgba(100,40,200,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 60% 10%, rgba(20,150,200,0.08) 0%, transparent 70%);
+}
+
+/* Status bar */
+.status-bar {
+  position: relative; z-index: 2;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 28px 0;
+  font-size: 14px; font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+
+/* Nav */
+.nav-bar {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+}
+.nav-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: rgba(255,255,255,0.7);
+  transition: all 0.15s; backdrop-filter: blur(10px);
+}
+.nav-btn:active { transform: scale(0.92); }
+.nav-title {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px; padding: 8px 18px;
+  font-size: 14px; font-weight: 500;
+  color: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+}
+.nav-dot { width:6px; height:6px; border-radius:50%; background:#4af; animation: dotPulse 2s infinite; }
+@keyframes dotPulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.3)} }
+
+/* Main */
+.main {
+  flex: 1; position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 0 28px; gap: 0;
+}
+
+/* Orb wrap */
+.orb-wrap {
+  position: relative; width: 240px; height: 240px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 40px;
+}
+
+/* Outer glow rings */
+.ring {
+  position: absolute; border-radius: 50%;
+  border: 1px solid rgba(80,160,255,0.15);
+  pointer-events: none;
+}
+.ring-1 { inset: -24px; animation: ringScale 4s ease-in-out infinite; }
+.ring-2 { inset: -44px; animation: ringScale 4s ease-in-out infinite 0.5s; border-color: rgba(80,100,255,0.08); }
+@keyframes ringScale {
+  0%,100%{transform:scale(1);opacity:.6} 50%{transform:scale(1.03);opacity:1}
+}
+
+/* Orbit ring */
+.orbit {
+  position: absolute; inset: -20px; border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: rgba(80,180,255,0.6);
+  border-right-color: rgba(80,180,255,0.2);
+  animation: orbitSpin 3s linear infinite;
+  opacity: 0; transition: opacity 0.5s;
+}
+.orbit.active { opacity: 1; }
+@keyframes orbitSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+.orbit-2 {
+  position: absolute; inset: -32px; border-radius: 50%;
+  border: 1px solid transparent;
+  border-bottom-color: rgba(160,80,255,0.5);
+  border-left-color: rgba(160,80,255,0.15);
+  animation: orbitSpin 5s linear infinite reverse;
+  opacity: 0; transition: opacity 0.5s;
+}
+.orbit-2.active { opacity: 1; }
+
+canvas#orb {
+  width: 240px; height: 240px; border-radius: 50%;
+  filter: drop-shadow(0 0 30px rgba(60,140,255,0.4))
+          drop-shadow(0 0 80px rgba(60,80,200,0.25));
+}
+
+/* Waveform bars */
+.wave-wrap {
+  width: 100%; height: 52px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  margin-bottom: 8px;
+}
+.wbar {
+  width: 3px; border-radius: 2px;
+  background: linear-gradient(to top, rgba(60,140,255,0.3), rgba(120,180,255,0.8));
+  transition: height 0.08s ease;
+  min-height: 3px;
+}
+
+/* Text */
+.text-area { width:100%; text-align:center; min-height:90px; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.question {
+  font-size:15px; color:rgba(255,255,255,0.45); font-weight:400; line-height:1.5;
+  opacity:0; transform:translateY(6px); transition:all 0.4s;
+}
+.question.show { opacity:1; transform:translateY(0); }
+.answer {
+  font-size:24px; color:rgba(255,255,255,0.92); font-weight:600;
+  letter-spacing:-0.3px; line-height:1.3;
+  opacity:0; transform:translateY(6px); transition:all 0.4s 0.15s;
+}
+.answer.show { opacity:1; transform:translateY(0); }
+.status {
+  font-size:15px; color:rgba(255,255,255,0.4); opacity:0; transition:opacity 0.3s;
+}
+.status.show { opacity:1; }
+
+/* Bottom */
+.bottom {
+  position: relative; z-index: 2;
+  padding: 0 32px 44px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.side-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 18px; color: rgba(255,255,255,0.6);
+  transition: all 0.15s; backdrop-filter: blur(10px);
+}
+.side-btn:active { transform: scale(0.92); }
+
+.mic-btn {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, rgba(40,100,220,0.9), rgba(80,60,200,0.9));
+  border: 1px solid rgba(100,160,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 28px;
+  box-shadow: 0 0 30px rgba(60,120,255,0.4), 0 4px 20px rgba(0,0,0,0.4);
+  transition: all 0.2s; position: relative;
+}
+.mic-btn:active { transform: scale(0.93); }
+.mic-btn.recording {
+  background: linear-gradient(135deg, rgba(220,40,80,0.9), rgba(200,60,40,0.9));
+  border-color: rgba(255,100,120,0.4);
+  box-shadow: 0 0 30px rgba(255,60,80,0.4), 0 4px 20px rgba(0,0,0,0.4);
+}
+.mic-btn::after {
+  content:''; position:absolute; inset:-8px; border-radius:50%;
+  border: 1.5px solid rgba(80,160,255,0.3);
+  animation: micGlow 2.5s ease-in-out infinite;
+}
+@keyframes micGlow { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.08);opacity:1} }
+.mic-btn.recording::after { border-color: rgba(255,80,100,0.4); }
+
+.home-indicator { height:34px; display:flex; align-items:center; justify-content:center; position:relative; z-index:2; }
+.home-indicator div { width:130px; height:4px; background:rgba(255,255,255,0.15); border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="aurora"></div>
+
+  <div class="status-bar">
+    <span>9:41</span>
+    <span style="font-size:12px;opacity:.6">▐▐▐ ᯤ ▮</span>
+  </div>
+
+  <div class="nav-bar">
+    <div class="nav-btn">‹</div>
+    <div class="nav-title">
+      <div class="nav-dot"></div>
+      CareSync AI
+    </div>
+    <div class="nav-btn">☰</div>
+  </div>
+
+  <div class="main">
+    <div class="orb-wrap">
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="orbit" id="orbit1"></div>
+      <div class="orbit-2" id="orbit2"></div>
+      <canvas id="orb" width="480" height="480"></canvas>
+    </div>
+
+    <div class="wave-wrap" id="waveWrap">
+      <!-- bars injected by JS -->
+    </div>
+
+    <div class="text-area">
+      <div class="question" id="questionEl"></div>
+      <div class="answer" id="answerEl"></div>
+      <div class="status show" id="statusEl">輕觸麥克風開始</div>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="side-btn">🔊</div>
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙</button>
+    <div class="side-btn">🌐</div>
+  </div>
+  <div class="home-indicator"><div></div></div>
+</div>
+
+<script>
+/* ── WebGL chrome/metallic orb ─────────────────────────── */
+const orbCanvas = document.getElementById('orb');
+const gl = orbCanvas.getContext('webgl', {alpha:true, premultipliedAlpha:false});
+
+const VERT = `attribute vec2 a; varying vec2 v; void main(){v=a;gl_Position=vec4(a,0.,1.);}`;
+const FRAG = `
+precision highp float;
+varying vec2 v;
+uniform float t;
+uniform float amp;
+
+float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5);}
+float noise(vec2 p){
+  vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);
+}
+float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p=p*2.+vec2(1.7,9.2);a*=.5;}return v;}
+
+void main(){
+  vec2 p = v;
+  float r = length(p);
+  float mask = 1.-smoothstep(0.82,1.0,r);
+  if(mask<.01){gl_FragColor=vec4(0.);return;}
+
+  vec3 N = normalize(vec3(p, sqrt(max(0.,1.-dot(p,p)))));
+  vec3 L = normalize(vec3(-0.5,0.8,1.3));
+  vec3 V = vec3(0.,0.,1.);
+  vec3 H = normalize(L+V);
+
+  float diff = max(dot(N,L),0.);
+  float spec = pow(max(dot(N,H),0.),55.);
+  float fresnel = pow(1.-max(dot(N,V),0.),2.5);
+
+  // Noise-driven energy flow
+  float n1 = fbm(p*2.+t*.25+vec2(0.5,1.2));
+  float n2 = fbm(p*3.5-t*.18+vec2(2.1,-0.7));
+  float energy = n1*.6+n2*.4 + amp*.3;
+
+  // Deep space palette: midnight blue → electric blue → cyan → white hot
+  vec3 c0 = vec3(0.02,0.04,0.15);  // deep space
+  vec3 c1 = vec3(0.05,0.20,0.70);  // electric blue
+  vec3 c2 = vec3(0.10,0.60,1.00);  // cyan blue
+  vec3 c3 = vec3(0.40,0.80,1.00);  // ice cyan
+  vec3 c4 = vec3(0.85,0.93,1.00);  // near white
+
+  vec3 col = mix(c0,c1,smoothstep(0.0,0.3,energy));
+  col = mix(col,c2,smoothstep(0.3,0.55,energy));
+  col = mix(col,c3,smoothstep(0.55,0.78,energy));
+  col = mix(col,c4,smoothstep(0.78,1.0,energy));
+
+  // Chrome-like lighting
+  col *= 0.3 + diff*0.9;
+  col += spec * 0.9 * vec3(0.85,0.93,1.0);
+
+  // Fresnel edge glow (electric blue rim)
+  col += fresnel * vec3(0.2,0.6,1.0) * (0.6 + amp*0.5);
+
+  // Extra amp glow in center
+  float cGlow = exp(-r*2.5) * amp * 0.8;
+  col += cGlow * vec3(0.3,0.7,1.0);
+
+  // Purple accent in shadows
+  float shadow = 1.-diff;
+  col += shadow * vec3(0.15,0.05,0.35) * 0.3;
+
+  gl_FragColor = vec4(col, smoothstep(1.0,0.72,r)*mask);
+}`;
+
+function mkS(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+const prog=gl.createProgram();
+gl.attachShader(prog,mkS(gl.VERTEX_SHADER,VERT));
+gl.attachShader(prog,mkS(gl.FRAGMENT_SHADER,FRAG));
+gl.linkProgram(prog);gl.useProgram(prog);
+const buf=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+const al=gl.getAttribLocation(prog,'a');
+gl.enableVertexAttribArray(al);gl.vertexAttribPointer(al,2,gl.FLOAT,false,0,0);
+gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+const uT=gl.getUniformLocation(prog,'t');
+const uA=gl.getUniformLocation(prog,'amp');
+let ampTarget=0.0, ampCurrent=0.0;
+
+/* ── Waveform bars ─────────────────────────────────────── */
+const waveWrap = document.getElementById('waveWrap');
+const BAR_COUNT = 36;
+const bars = [];
+for(let i=0;i<BAR_COUNT;i++){
+  const b = document.createElement('div');
+  b.className = 'wbar';
+  b.style.height = '3px';
+  waveWrap.appendChild(b);
+  bars.push(b);
+}
+
+/* ── Mic Audio Analyser ────────────────────────────────── */
+let audioCtx=null, analyser=null, micStream=null, freqData=null;
+async function startMicAnalyser(){
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize=256; analyser.smoothingTimeConstant=0.8;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    audioCtx.createMediaStreamSource(micStream).connect(analyser);
+  } catch(e){ console.warn('Mic failed',e); }
+}
+function getMicVol(){
+  if(!analyser)return 0;
+  analyser.getByteFrequencyData(freqData);
+  return freqData.reduce((a,b)=>a+b,0)/(freqData.length*255);
+}
+
+/* ── State machine ─────────────────────────────────────── */
+let state='idle';
+const micBtn=document.getElementById('micBtn');
+const statusEl=document.getElementById('statusEl');
+const questionEl=document.getElementById('questionEl');
+const answerEl=document.getElementById('answerEl');
+const orbit1=document.getElementById('orbit1');
+const orbit2=document.getElementById('orbit2');
+
+function setState(s){
+  state=s;
+  questionEl.classList.remove('show');
+  answerEl.classList.remove('show');
+  statusEl.classList.remove('show');
+  orbit1.classList.remove('active');
+  orbit2.classList.remove('active');
+
+  if(s==='idle'){
+    ampTarget=0.0;
+    statusEl.textContent='輕觸麥克風開始';
+    statusEl.classList.add('show');
+    micBtn.textContent='🎙'; micBtn.classList.remove('recording');
+  } else if(s==='listening'){
+    ampTarget=0.4;
+    statusEl.textContent='聆聽中…';
+    statusEl.classList.add('show');
+    micBtn.textContent='⏹'; micBtn.classList.add('recording');
+    orbit1.classList.add('active'); orbit2.classList.add('active');
+  } else if(s==='processing'){
+    ampTarget=0.25;
+    statusEl.textContent='Processing..';
+    statusEl.classList.add('show');
+    micBtn.textContent='🎙'; micBtn.classList.remove('recording');
+    orbit1.classList.add('active'); orbit2.classList.add('active');
+  } else if(s==='speaking'){
+    ampTarget=0.65;
+    orbit1.classList.add('active'); orbit2.classList.add('active');
+  }
+}
+
+/* ── Speech ────────────────────────────────────────────── */
+let recognition=null, finalTranscript='';
+const responses = {
+  '頭痛':{ ja:'頭痛がするんですね。いつから続いていますか？' },
+  '發燒':{ ja:'熱があるんですね。体温を測りましたか？' },
+  '肚子':{ ja:'お腹が痛いんですね。どのあたりが痛みますか？' },
+  '咳嗽':{ ja:'咳が出るんですね。いつから続いていますか？' },
+  '過敏':{ ja:'アレルギーがあるんですね。何に対するアレルギーですか？' },
+  '腰':  { ja:'腰が痛いんですね。どれくらい前から痛みますか？' },
+};
+
+function startSTT(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ alert('請用Chrome或Safari'); return; }
+  recognition=new SR();
+  recognition.lang='zh-TW'; recognition.interimResults=true; recognition.continuous=false;
+  recognition.onresult=(e)=>{
+    let interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) finalTranscript+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    statusEl.textContent=finalTranscript||interim||'聆聽中…';
+  };
+  recognition.onerror=()=>setState('idle');
+  recognition.onend=()=>{ if(finalTranscript.trim()) processInput(finalTranscript.trim()); else setState('idle'); };
+  finalTranscript='';
+  recognition.start();
+}
+
+async function processInput(text){
+  setState('processing');
+  questionEl.textContent=text; questionEl.classList.add('show');
+  await new Promise(r=>setTimeout(r,1200));
+  let reply='承知しました。医師にお伝えします。少々お待ちください。';
+  for(const kw of Object.keys(responses)){
+    if(text.includes(kw)){ reply=responses[kw].ja; break; }
+  }
+  answerEl.textContent=reply; setState('speaking'); answerEl.classList.add('show');
+  speakText(reply,'ja-JP',()=>{ setTimeout(()=>setState('idle'),800); });
+}
+
+function speakText(text,lang,cb){
+  if(!window.speechSynthesis){ cb?.(); return; }
+  speechSynthesis.cancel();
+  const utt=new SpeechSynthesisUtterance(text);
+  utt.lang=lang; utt.rate=0.93; utt.pitch=1.05;
+  const v=speechSynthesis.getVoices().find(v=>v.lang.startsWith(lang.split('-')[0])&&v.localService);
+  if(v) utt.voice=v;
+  utt.onend=()=>{ ampTarget=0.0; cb?.(); };
+  speechSynthesis.speak(utt);
+}
+
+async function toggleMic(){
+  if(state==='idle'||state==='speaking'){
+    speechSynthesis.cancel();
+    if(!audioCtx) await startMicAnalyser();
+    setState('listening');
+    startSTT();
+  } else if(state==='listening'){
+    recognition?.stop();
+  }
+}
+
+/* ── Main loop ─────────────────────────────────────────── */
+function loop(ms){
+  // Drive amplitude
+  if(state==='listening'&&analyser){
+    const vol=getMicVol();
+    ampTarget=Math.min(0.08+vol*5.0,1.0);
+  } else if(state==='speaking'){
+    ampTarget=0.4+Math.sin(ms*0.004)*0.25;
+  } else if(state==='processing'){
+    ampTarget=0.12+Math.sin(ms*0.002)*0.08;
+  }
+  ampCurrent+=(ampTarget-ampCurrent)*0.06;
+
+  // Render orb
+  gl.viewport(0,0,480,480);
+  gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(uT,ms*0.001);
+  gl.uniform1f(uA,ampCurrent);
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
+
+  // Waveform bars
+  if(state==='listening'||state==='speaking'){
+    bars.forEach((b,i)=>{
+      let h;
+      if(state==='listening'&&analyser){
+        analyser.getByteFrequencyData(freqData);
+        const idx=Math.floor(i/BAR_COUNT*freqData.length*0.6);
+        h=3+freqData[idx]/255*44;
+      } else {
+        h=3+Math.abs(Math.sin(ms*0.003+i*0.4+Math.sin(ms*0.001+i*0.2)))*38;
+      }
+      b.style.height=h+'px';
+      b.style.opacity=0.3+(h/47)*0.7;
+    });
+  } else {
+    bars.forEach(b=>{ b.style.height='3px'; b.style.opacity='0.15'; });
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+setState('idle');
+</script>
+</body>
+</html>
