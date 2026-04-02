@@ -33,6 +33,24 @@
     position: relative;
   }
 
+  /* Real mobile: full screen, no frame */
+  @media (max-width: 430px) {
+    body {
+      background: rgba(240, 246, 254, 1);
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-height: 100dvh;
+    }
+    .phone {
+      width: 100vw;
+      height: 100dvh;
+      border-radius: 0;
+      border: none;
+      box-shadow: none;
+    }
+    .soap-page { border-radius: 0; }
+  }
+
   /* Status bar */
   .status-bar {
     display: flex;
@@ -1123,14 +1141,18 @@ async function geminiDoctorReply(patientText, patientLangCode) {
   }
 }
 
+let silenceTimer = null;
+const SILENCE_MS = 1800; // 靜音 1.8 秒後才送出
+
 function startSTT() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { alert('請用 Chrome 或 Safari'); return; }
   recognition = new SR();
   recognition.lang = patientLang === 'zh' ? 'zh-TW' : 'en-US';
   recognition.interimResults = true;
-  recognition.continuous = false;
+  recognition.continuous = true;  // 持續聆聽，不自動截斷
   finalTranscript = '';
+  clearTimeout(silenceTimer);
 
   // Show patient caption immediately
   const patientLabel = patientLang === 'zh' ? '患者 · 中文 → 日文' : 'Patient · EN → JA';
@@ -1142,21 +1164,30 @@ function startSTT() {
   recognition.onaudiostart = () => console.log('🎙 Audio input started');
 
   recognition.onresult = (e) => {
+    clearTimeout(silenceTimer);
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
     capOriginal.textContent = finalTranscript || interim || '…';
+
+    // 有講到話後，靜音 1.8 秒才自動送出
+    if (finalTranscript.trim() || interim.trim()) {
+      silenceTimer = setTimeout(() => {
+        recognition.stop();
+      }, SILENCE_MS);
+    }
   };
 
   recognition.onerror = (e) => {
     console.warn('Speech error:', e.error);
+    clearTimeout(silenceTimer);
     if (e.error === 'not-allowed') {
       alert('請允許麥克風存取權限');
       setState('idle');
     } else if (e.error === 'no-speech') {
-      // 沒偵測到聲音，不要關掉，繼續等
+      // 沒偵測到聲音，繼續等待
     } else if (e.error === 'aborted') {
       // 被中斷，靜默處理
     } else {
@@ -1211,13 +1242,12 @@ async function toggleMic() {
   if (state === 'idle' || state === 'speaking') {
     speechSynthesis.cancel();
     setState('listening');
-    // 先啟動 STT，等 onstart 之後再初始化 analyser（避免搶麥克風）
     startSTT();
-    // Analyser 延遲 800ms 再啟動
     setTimeout(async () => {
       if (state === 'listening' && !audioCtx) await startMicAnalyser();
     }, 800);
   } else if (state === 'listening') {
+    clearTimeout(silenceTimer);
     recognition?.stop();
   }
 }
