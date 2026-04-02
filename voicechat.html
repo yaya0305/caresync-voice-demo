@@ -1238,7 +1238,9 @@ function startSTT() {
       }
     };
 
-    if (!isMuted) speakText(doctorJa, 'ja-JP', afterDoctor);
+    // 播放患者語言（手機一定有這個語音包）
+    const ttsLang = patientLang === 'zh' ? 'zh-TW' : 'en-US';
+    if (!isMuted) speakText(doctorTranslated, ttsLang, afterDoctor);
     else afterDoctor();
   };
 
