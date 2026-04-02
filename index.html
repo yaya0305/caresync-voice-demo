@@ -2,469 +2,977 @@
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>語音動態效果選擇</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Voice Chat</title>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
   body {
-    background: #f5f5f7;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-    padding: 40px 20px;
-  }
-  h1 {
-    text-align: center;
-    font-size: 28px;
-    font-weight: 600;
-    color: #1d1d1f;
-    margin-bottom: 8px;
-  }
-  .subtitle {
-    text-align: center;
-    color: #86868b;
-    margin-bottom: 48px;
-    font-size: 15px;
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-  .card {
-    background: white;
-    border-radius: 20px;
-    padding: 32px 24px;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.08);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-  }
-  .card-title {
-    font-size: 17px;
-    font-weight: 600;
-    color: #1d1d1f;
-  }
-  .card-label {
-    font-size: 12px;
-    color: #86868b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .demo-area {
-    width: 100%;
-    height: 120px;
+    background: linear-gradient(145deg, #c8dff7 0%, #d8eaf8 40%, #c5d8f5 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
-    background: #f5f5f7;
+    min-height: 100vh;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: rgba(245, 248, 252, 0.92);
+    border-radius: 54px;
+    border: 1.5px solid rgba(255,255,255,0.85);
+    box-shadow:
+      0 0 0 1px rgba(180,210,240,0.4),
+      0 40px 120px rgba(100,160,220,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.9);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     position: relative;
   }
-  .btn {
-    padding: 10px 24px;
-    border-radius: 999px;
-    border: none;
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 28px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1d1d1f;
+    flex-shrink: 0;
+  }
+  .status-icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  /* Nav bar */
+  .nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     font-size: 14px;
+    color: #3c3c43;
+    transition: all 0.15s;
+  }
+  .nav-btn:active { transform: scale(0.92); }
+
+  .nav-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.9);
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 15px;
     font-weight: 500;
-    transition: all 0.2s;
+    color: #1d1d1f;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
-  .btn-primary {
-    background: #0071e3;
-    color: white;
-  }
-  .btn-primary:hover { background: #0077ed; }
-  .btn-stop {
-    background: #ff3b30;
-    color: white;
-  }
-
-  /* === 1. SIRI WAVE === */
-  #siriCanvas { width: 100%; height: 120px; }
-
-  /* === 2. BAR WAVEFORM === */
-  .bars {
+  .nav-wave {
     display: flex;
+    gap: 2px;
     align-items: center;
-    gap: 4px;
-    height: 80px;
+    height: 14px;
   }
-  .bar {
-    width: 4px;
-    border-radius: 2px;
-    background: #0071e3;
-    transition: height 0.1s ease;
-    min-height: 4px;
+  .nav-wave span {
+    width: 2px;
+    border-radius: 1px;
+    background: #3a8ef0;
+    animation: navWave 1.2s ease-in-out infinite;
   }
-
-  /* === 3. ORB === */
-  .orb {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #5e5ce6, #0071e3, #30d158);
-    box-shadow: 0 0 40px rgba(0,113,227,0.4);
-    animation: orbIdle 3s ease-in-out infinite;
-  }
-  @keyframes orbIdle {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 40px rgba(0,113,227,0.3); }
-    50% { transform: scale(1.05); box-shadow: 0 0 60px rgba(0,113,227,0.5); }
-  }
-  .orb.speaking {
-    animation: orbSpeak 0.3s ease-in-out infinite alternate;
-  }
-  @keyframes orbSpeak {
-    from { transform: scale(0.92); box-shadow: 0 0 20px rgba(0,113,227,0.3); }
-    to   { transform: scale(1.12); box-shadow: 0 0 80px rgba(0,113,227,0.7); }
+  .nav-wave span:nth-child(1) { height: 5px; animation-delay: 0s; }
+  .nav-wave span:nth-child(2) { height: 10px; animation-delay: 0.15s; }
+  .nav-wave span:nth-child(3) { height: 14px; animation-delay: 0.3s; }
+  .nav-wave span:nth-child(4) { height: 8px; animation-delay: 0.45s; }
+  .nav-wave span:nth-child(5) { height: 4px; animation-delay: 0.6s; }
+  @keyframes navWave {
+    0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
+    50% { transform: scaleY(1); opacity: 1; }
   }
 
-  /* === 4. MINIMAL PULSE === */
-  .pulse-dot {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #1d1d1f;
+  /* Main content */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 32px;
+    gap: 0;
+  }
+
+  /* Orb container */
+  .orb-wrap {
     position: relative;
-    animation: dotBreath 2.5s ease-in-out infinite;
-  }
-  @keyframes dotBreath {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-  }
-  .pulse-dot::before,
-  .pulse-dot::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    background: rgba(29,29,31,0.15);
-    animation: pulseRing 2.5s ease-out infinite;
-  }
-  .pulse-dot::after { animation-delay: 1.25s; }
-  @keyframes pulseRing {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(3.5); opacity: 0; }
-  }
-  .pulse-dot.speaking {
-    animation: dotSpeak 0.4s ease-in-out infinite alternate;
-  }
-  @keyframes dotSpeak {
-    from { transform: scale(1); background: #1d1d1f; }
-    to   { transform: scale(1.4); background: #0071e3; }
-  }
-
-  /* === 5. ELEVENLABS STYLE - thin lines === */
-  .thin-bars {
+    width: 220px;
+    height: 220px;
     display: flex;
     align-items: center;
-    gap: 3px;
-    height: 60px;
+    justify-content: center;
+    margin-bottom: 36px;
   }
-  .thin-bar {
+
+  /* Outer glow ring */
+  .orb-ring {
+    position: absolute;
+    inset: -18px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(100, 160, 240, 0.25);
+    animation: ringPulse 3s ease-in-out infinite;
+  }
+  .orb-ring-2 {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 1px solid rgba(100, 160, 240, 0.15);
+  }
+
+  /* Progress arc */
+  .orb-arc {
+    position: absolute;
+    inset: -18px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    border-top-color: #5ab0f0;
+    border-right-color: rgba(90,176,240,0.3);
+    animation: arcSpin 2.5s linear infinite;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .orb-arc.visible { opacity: 1; }
+
+  @keyframes arcSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes ringPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.04); opacity: 1; }
+  }
+
+  canvas#orb {
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    filter: drop-shadow(0 20px 50px rgba(60,140,240,0.35)) drop-shadow(0 4px 16px rgba(60,120,220,0.2));
+  }
+
+  /* Text area */
+  .text-area {
+    text-align: center;
+    width: 100%;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .question-text {
+    font-size: 16px;
+    color: #86868b;
+    font-weight: 400;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.4s ease;
+  }
+  .question-text.show { opacity: 1; transform: translateY(0); }
+
+  .answer-text {
+    font-size: 26px;
+    color: #1d1d1f;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.5px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.4s ease 0.15s;
+  }
+  .answer-text.show { opacity: 1; transform: translateY(0); }
+
+  .status-text {
+    font-size: 17px;
+    color: #3c3c43;
+    font-weight: 400;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .status-text.show { opacity: 1; }
+
+  /* Waveform bar visualizer */
+  .wave-section {
+    padding: 0 28px 16px;
+    flex-shrink: 0;
+  }
+  .wave-pill {
+    background: #f0f1f6;
+    border-radius: 999px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 16px;
+    overflow: hidden;
+  }
+  .wbar {
     width: 3px;
     border-radius: 2px;
-    background: #1d1d1f;
-    height: 4px;
-    transition: height 0.08s ease;
+    background: linear-gradient(to top, #a8c4f8, #5b8ef0);
+    min-height: 3px;
+    transition: height 0.07s ease;
+    flex-shrink: 0;
   }
 
-  /* === 6. CIRCLE WAVEFORM === */
-  #circleCanvas { width: 120px; height: 120px; }
+  /* Bottom area */
+  .bottom {
+    padding: 0 32px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
 
+  .side-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    font-size: 18px;
+    transition: all 0.15s;
+  }
+  .side-btn:active { transform: scale(0.92); }
+
+  .mic-btn {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow:
+      0 4px 20px rgba(0,0,0,0.1),
+      0 1px 4px rgba(0,0,0,0.06);
+    font-size: 26px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .mic-btn:active { transform: scale(0.93); }
+  .mic-btn.recording {
+    background: linear-gradient(135deg, #3a8ef0, #5b5ef0);
+    box-shadow: 0 4px 24px rgba(58,142,240,0.4);
+  }
+  .mic-btn.recording::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid rgba(58,142,240,0.3);
+    animation: micRing 1.5s ease-out infinite;
+  }
+  @keyframes micRing {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.4); opacity: 0; }
+  }
+
+  /* Home indicator */
+  .home-indicator {
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .home-indicator div {
+    width: 130px;
+    height: 5px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+  }
+  /* Language toggle */
+  .lang-toggle {
+    background: rgba(91,142,240,0.12);
+    border: 1px solid rgba(91,142,240,0.25);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #5b8ef0;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .lang-toggle:active { transform: scale(0.95); }
+
+  /* Clean text caption — like Pinterest reference */
+  .caption-area {
+    width: 100%;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 28px;
+  }
+  .cap-speaker {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #a0aec0;
+    margin-bottom: 6px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .cap-speaker.show { opacity: 1; }
+  /* original spoken text — small italic */
+  .cap-original {
+    font-size: 15px;
+    font-weight: 400;
+    color: #86868b;
+    line-height: 1.5;
+    min-height: 22px;
+    margin-bottom: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .cap-original.show { opacity: 1; }
+  /* translation / doctor reply — large bold */
+  .cap-translation {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1d1d1f;
+    line-height: 1.3;
+    min-height: 30px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    letter-spacing: -0.3px;
+  }
+  .cap-translation.show { opacity: 1; }
+
+  .streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: #5b8ef0;
+    border-radius: 1px;
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .status-text {
+    font-size: 14px;
+    color: #a0aec0;
+    text-align: center;
+    padding: 8px 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .status-text.show { opacity: 1; }
 </style>
+<script type="module" src="https://esm.sh/ionicons@latest/dist/ionicons/ionicons.esm.js"></script>
+<script nomodule src="https://esm.sh/ionicons@latest/dist/ionicons/ionicons.js"></script>
 </head>
 <body>
 
-<h1>語音動態效果</h1>
-<p class="subtitle">點擊「播放」看效果，選你喜歡的風格</p>
-
-<div class="grid">
-
-  <!-- 1. Siri Wave -->
-  <div class="card">
-    <div class="card-label">風格 1</div>
-    <div class="card-title">Siri 波浪</div>
-    <div class="demo-area" style="background:#000">
-      <canvas id="siriCanvas"></canvas>
+<div class="phone">
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-icons">
+      <span>▐▐▐</span>
+      <span>WiFi</span>
+      <span>🔋</span>
     </div>
-    <button class="btn btn-primary" onclick="toggleSiri(this)">▶ 播放</button>
   </div>
 
-  <!-- 2. Bar Waveform -->
-  <div class="card">
-    <div class="card-label">風格 2</div>
-    <div class="card-title">聲波條形</div>
-    <div class="demo-area">
-      <div class="bars" id="bars"></div>
+  <!-- Nav -->
+  <div class="nav-bar">
+    <div class="nav-btn"><ion-icon name="chevron-back-outline"></ion-icon></div>
+    <div class="nav-title">
+      <div class="nav-wave">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      即時翻譯
     </div>
-    <button class="btn btn-primary" onclick="toggleBars(this)">▶ 播放</button>
+    <div class="lang-toggle" id="langToggle" onclick="toggleLang()">
+      <span id="langLabel">中文</span>
+    </div>
   </div>
 
-  <!-- 3. Orb -->
-  <div class="card">
-    <div class="card-label">風格 3</div>
-    <div class="card-title">ChatGPT Orb 球體</div>
-    <div class="demo-area" style="background:#1d1d1f">
-      <div class="orb" id="orb"></div>
+  <!-- Main -->
+  <div class="main">
+    <div class="orb-wrap">
+      <div class="orb-ring"></div>
+      <div class="orb-ring-2"></div>
+      <div class="orb-arc" id="orbArc"></div>
+      <canvas id="orb" width="440" height="440"></canvas>
     </div>
-    <button class="btn btn-primary" onclick="toggleOrb(this)">▶ 播放</button>
+
+    <!-- Caption area -->
+    <div class="caption-area" id="captionArea">
+      <div class="status-text show" id="statusText">輕觸麥克風開始對話</div>
+      <div class="cap-speaker" id="capSpeaker"></div>
+      <div class="cap-original"  id="capOriginal"></div>
+      <div class="cap-translation" id="capTranslation"></div>
+    </div>
   </div>
 
-  <!-- 4. Minimal Pulse -->
-  <div class="card">
-    <div class="card-label">風格 4</div>
-    <div class="card-title">極簡脈衝（Perplexity 風）</div>
-    <div class="demo-area">
-      <div class="pulse-dot" id="pulseDot"></div>
-    </div>
-    <button class="btn btn-primary" onclick="togglePulse(this)">▶ 播放</button>
+  <!-- Waveform -->
+  <div class="wave-section">
+    <div class="wave-pill" id="wavePill"></div>
   </div>
 
-  <!-- 5. ElevenLabs Thin Lines -->
-  <div class="card">
-    <div class="card-label">風格 5</div>
-    <div class="card-title">細線脈衝（ElevenLabs 風）</div>
-    <div class="demo-area">
-      <div class="thin-bars" id="thinBars"></div>
-    </div>
-    <button class="btn btn-primary" onclick="toggleThin(this)">▶ 播放</button>
+  <!-- Bottom -->
+  <div class="bottom">
+    <div class="side-btn"><ion-icon name="volume-high-outline"></ion-icon></div>
+    <button class="mic-btn" id="micBtn" onclick="toggleMic()">
+      <ion-icon name="mic-outline" id="micIcon"></ion-icon>
+    </button>
+    <div class="side-btn"><ion-icon name="language-outline"></ion-icon></div>
   </div>
 
-  <!-- 6. Circle Waveform -->
-  <div class="card">
-    <div class="card-label">風格 6</div>
-    <div class="card-title">圓形聲波</div>
-    <div class="demo-area">
-      <canvas id="circleCanvas" width="120" height="120"></canvas>
-    </div>
-    <button class="btn btn-primary" onclick="toggleCircle(this)">▶ 播放</button>
-  </div>
-
+  <div class="home-indicator"><div></div></div>
 </div>
 
 <script>
-// ============ 1. SIRI WAVE ============
-const siriCanvas = document.getElementById('siriCanvas');
-const siriCtx = siriCanvas.getContext('2d');
-let siriRunning = false;
-let siriAnim;
-
-function resizeSiri() {
-  siriCanvas.width = siriCanvas.offsetWidth;
-  siriCanvas.height = siriCanvas.offsetHeight;
+// ============================================================
+// Waveform bars setup
+// ============================================================
+const wavePill = document.getElementById('wavePill');
+const BAR_COUNT = 38;
+const wbars = [];
+for (let i = 0; i < BAR_COUNT; i++) {
+  const b = document.createElement('div');
+  b.className = 'wbar';
+  b.style.height = '3px';
+  wavePill.appendChild(b);
+  wbars.push(b);
 }
-resizeSiri();
 
-function drawSiriWave(t, amp) {
-  const w = siriCanvas.width, h = siriCanvas.height;
-  siriCtx.clearRect(0, 0, w, h);
-  const waves = [
-    { color: 'rgba(0,120,255,0.8)', freq: 0.8, offset: 0, amp: amp },
-    { color: 'rgba(120,0,255,0.6)', freq: 1.2, offset: 1, amp: amp * 0.7 },
-    { color: 'rgba(0,200,255,0.5)', freq: 0.5, offset: 2, amp: amp * 0.5 },
-    { color: 'rgba(255,50,150,0.4)', freq: 1.8, offset: 3, amp: amp * 0.4 },
-  ];
-  waves.forEach(wave => {
-    siriCtx.beginPath();
-    siriCtx.moveTo(0, h / 2);
-    for (let x = 0; x < w; x++) {
-      const y = h / 2 + Math.sin(x * wave.freq * 0.02 + t + wave.offset) * wave.amp
-                       + Math.sin(x * wave.freq * 0.04 + t * 1.3 + wave.offset) * wave.amp * 0.4;
-      x === 0 ? siriCtx.moveTo(x, y) : siriCtx.lineTo(x, y);
+// ============================================================
+// WebGL Orb — 藍白旋渦球
+// ============================================================
+const canvas = document.getElementById('orb');
+const gl = canvas.getContext('webgl');
+
+const vert = `
+attribute vec2 p;
+varying vec2 uv;
+void main() { uv = p; gl_Position = vec4(p, 0., 1.); }
+`;
+
+const frag = `
+precision highp float;
+varying vec2 uv;
+uniform float t;
+uniform float amp;
+
+// Smooth noise
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5); }
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  f = f*f*(3.-2.*f);
+  return mix(mix(hash(i), hash(i+vec2(1,0)), f.x),
+             mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y);
+}
+float fbm(vec2 p) {
+  float v=0., a=.5;
+  for(int i=0;i<6;i++){ v+=a*noise(p); p=p*2.1+vec2(1.7,9.2); a*=.5; }
+  return v;
+}
+
+// Swirl
+vec2 swirl(vec2 p, float str) {
+  float angle = str * (1. - length(p));
+  float s = sin(angle), c = cos(angle);
+  return vec2(c*p.x - s*p.y, s*p.x + c*p.y);
+}
+
+void main() {
+  vec2 p = uv;
+  float r = length(p);
+
+  // Sphere mask
+  float sphere = 1. - smoothstep(.82, 1.0, r);
+  if(sphere < 0.01) { gl_FragColor = vec4(0.); return; }
+
+  // 3D sphere normal
+  vec3 normal = normalize(vec3(p, sqrt(max(0., 1.-dot(p,p)))));
+  vec3 light = normalize(vec3(-0.5, 0.8, 1.2));
+  float diff = max(dot(normal, light), 0.);
+
+  // Swirl effect
+  vec2 sw = swirl(p, 2.8 + amp * 1.5 + sin(t*0.4)*0.3);
+  sw += vec2(sin(t*0.3)*0.1, cos(t*0.25)*0.08);
+
+  // FBM noise for swirl pattern
+  float n1 = fbm(sw * 2.2 + t * 0.18);
+  float n2 = fbm(sw * 3.5 - t * 0.12 + 2.3);
+  float pattern = n1 * 0.6 + n2 * 0.4;
+
+  // Colors: deep blue, sky blue, white
+  vec3 col1 = vec3(0.15, 0.45, 0.92);  // deep blue
+  vec3 col2 = vec3(0.42, 0.75, 0.98);  // sky blue
+  vec3 col3 = vec3(0.80, 0.92, 1.00);  // ice white
+  vec3 col4 = vec3(0.55, 0.65, 0.95);  // lavender blue
+
+  vec3 col = mix(col1, col2, smoothstep(0., 0.4, pattern));
+  col = mix(col, col3, smoothstep(0.4, 0.75, pattern));
+  col = mix(col, col4, smoothstep(0.75, 1.0, pattern));
+
+  // Lighting
+  col *= 0.5 + diff * 0.7;
+
+  // Specular highlight (top-left gloss)
+  vec3 viewDir = vec3(0., 0., 1.);
+  vec3 halfV = normalize(light + viewDir);
+  float spec = pow(max(dot(normal, halfV), 0.), 28.);
+  col += spec * 0.65 * vec3(0.9, 0.96, 1.0);
+
+  // Fresnel rim glow
+  float fresnel = pow(1. - max(dot(normal, viewDir), 0.), 3.5);
+  col += fresnel * vec3(0.3, 0.65, 1.0) * 0.5;
+
+  // Edge soften
+  float edge = smoothstep(1.0, 0.75, r);
+
+  gl_FragColor = vec4(col, edge * sphere);
+}
+`;
+
+function mkShader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src); gl.compileShader(s); return s;
+}
+const prog = gl.createProgram();
+gl.attachShader(prog, mkShader(gl.VERTEX_SHADER, vert));
+gl.attachShader(prog, mkShader(gl.FRAGMENT_SHADER, frag));
+gl.linkProgram(prog); gl.useProgram(prog);
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const ap = gl.getAttribLocation(prog, 'p');
+gl.enableVertexAttribArray(ap);
+gl.vertexAttribPointer(ap, 2, gl.FLOAT, false, 0, 0);
+gl.enable(gl.BLEND);
+gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+const uT = gl.getUniformLocation(prog, 't');
+const uA = gl.getUniformLocation(prog, 'amp');
+let ampTarget = 0.0, ampCurrent = 0.0;
+
+function renderOrb(ms) {
+  ampCurrent += (ampTarget - ampCurrent) * 0.04;
+  gl.viewport(0, 0, 440, 440);
+  gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(uT, ms * 0.001);
+  gl.uniform1f(uA, ampCurrent);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// ============================================================
+// Caption UI — simple text (no cards)
+// ============================================================
+const statusText     = document.getElementById('statusText');
+const capSpeaker     = document.getElementById('capSpeaker');
+const capOriginal    = document.getElementById('capOriginal');
+const capTranslation = document.getElementById('capTranslation');
+const micBtn         = document.getElementById('micBtn');
+const micIcon        = document.getElementById('micIcon');
+const orbArc         = document.getElementById('orbArc');
+
+let state = 'idle';
+
+function showCaption(speaker, iconName) {
+  statusText.classList.remove('show');
+  capSpeaker.innerHTML = '';
+  const ico = document.createElement('ion-icon');
+  ico.setAttribute('name', iconName);
+  capSpeaker.appendChild(ico);
+  capSpeaker.appendChild(document.createTextNode(' ' + speaker));
+  capSpeaker.classList.add('show');
+  capOriginal.classList.add('show');
+  capTranslation.classList.add('show');
+}
+
+function resetCaption() {
+  capSpeaker.classList.remove('show');
+  capOriginal.classList.remove('show');
+  capTranslation.classList.remove('show');
+  capOriginal.textContent = '';
+  capTranslation.textContent = '';
+}
+
+function typeText(el, text, delay = 30) {
+  return new Promise(resolve => {
+    el.textContent = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'streaming-cursor';
+    el.appendChild(cursor);
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i < text.length) {
+        el.insertBefore(document.createTextNode(text[i]), cursor);
+        i++;
+      } else {
+        clearInterval(iv);
+        cursor.remove();
+        resolve();
+      }
+    }, delay);
+  });
+}
+
+function setMicIcon(name) {
+  const el = document.getElementById('micIcon') || document.querySelector('#micBtn ion-icon');
+  if (el) el.setAttribute('name', name);
+}
+
+function setState(s) {
+  state = s;
+  orbArc.classList.remove('visible');
+  if (s === 'idle') {
+    ampTarget = 0.0;
+    setMicIcon('mic-outline');
+    micBtn.classList.remove('recording');
+    resetCaption();
+    statusText.textContent = '輕觸麥克風開始對話';
+    statusText.classList.add('show');
+  } else if (s === 'listening') {
+    ampTarget = 0.4;
+    setMicIcon('stop-outline');
+    micBtn.classList.add('recording');
+  } else if (s === 'processing') {
+    ampTarget = 0.2;
+    orbArc.classList.add('visible');
+    setMicIcon('mic-outline');
+    micBtn.classList.remove('recording');
+  } else if (s === 'speaking') {
+    ampTarget = 0.65;
+    setMicIcon('mic-outline');
+    micBtn.classList.remove('recording');
+  }
+}
+
+// ============================================================
+// Real-time Mic Volume → Orb
+// ============================================================
+let audioCtx = null;
+let analyser = null;
+let micStream = null;
+let freqData = null;
+
+async function startMicAnalyser() {
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.75;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    const source = audioCtx.createMediaStreamSource(micStream);
+    source.connect(analyser);
+  } catch(e) {
+    console.warn('Mic analyser failed:', e);
+  }
+}
+
+function getMicVolume() {
+  if (!analyser) return 0;
+  analyser.getByteFrequencyData(freqData);
+  const sum = freqData.reduce((a, b) => a + b, 0);
+  return sum / (freqData.length * 255); // 0~1
+}
+
+// ============================================================
+// Language setting (patient side)
+// ============================================================
+let patientLang = 'zh'; // 'zh' | 'en'
+
+function toggleLang() {
+  patientLang = patientLang === 'zh' ? 'en' : 'zh';
+  document.getElementById('langLabel').textContent = patientLang === 'zh' ? '中文' : 'EN';
+}
+
+// ============================================================
+// Speech + Caption flow
+// ============================================================
+let recognition = null, finalTranscript = '';
+let replyIdx = 0;
+
+// Doctor (JA) → Patient translation
+const doctorReplies = [
+  { ja: 'どうされましたか？', zh: '今天哪裡不舒服？', en: 'What brings you in today?' },
+  { ja: '頭痛はいつから続いていますか？', zh: '頭痛從什麼時候開始？', en: 'When did the headache start?' },
+  { ja: '熱は何度ぐらいですか？', zh: '發燒大概幾度？', en: 'What is your temperature?' },
+  { ja: 'アレルギーはありますか？', zh: '你有藥物過敏嗎？', en: 'Do you have any allergies?' },
+  { ja: '他に症状はありますか？', zh: '還有其他症狀嗎？', en: 'Any other symptoms?' },
+  { ja: '痛みは１から１０で何点ですか？', zh: '疼痛 1 到 10 分，大約幾分？', en: 'Rate your pain from 1 to 10.' },
+  { ja: '少しお待ちください。確認します。', zh: '請稍等，我來確認。', en: 'Please wait a moment.' },
+  { ja: '現在飲んでいるお薬はありますか？', zh: '目前有在吃什麼藥嗎？', en: 'Are you taking any medications?' },
+];
+
+// Patient (ZH/EN) → JA translation
+const zhToJa = {
+  '頭痛': '頭がとても痛いです。',
+  '頭很痛': '頭がひどく痛いです。',
+  '發燒': '熱があります。',
+  '肚子': 'お腹が痛いです。',
+  '腹痛': '腹痛があります。',
+  '咳嗽': '咳が出ています。',
+  '過敏': 'アレルギーがあります。',
+  '睡眠': '眠れていません。',
+  '暈': 'めまいがします。',
+  '噁心': '吐き気がします。',
+  '嘔吐': '嘔吐しました。',
+  '喉嚨': '喉が痛いです。',
+  '胸痛': '胸が痛いです。',
+  '背痛': '背中が痛いです。',
+  '過敏藥': '薬のアレルギーがあります。',
+  '沒有': 'いいえ、ありません。',
+  '有': 'はい、あります。',
+};
+const enToJa = {
+  'headache': '頭が痛いです。',
+  'fever': '熱があります。',
+  'stomach': 'お腹が痛いです。',
+  'cough': '咳が出ています。',
+  'allergy': 'アレルギーがあります。',
+  'dizzy': 'めまいがします。',
+  'nausea': '吐き気がします。',
+  'pain': '痛みがあります。',
+  'throat': '喉が痛いです。',
+  'chest': '胸が痛いです。',
+  'vomit': '嘔吐しました。',
+  'no': 'いいえ、ありません。',
+  'yes': 'はい、そうです。',
+};
+
+// ============================================================
+// Claude Translation (via local proxy)
+// ============================================================
+const PROXY_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3002/translate'
+  : '/translate';
+
+async function claudeCall(prompt) {
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  if (!res.ok) throw new Error(`Proxy ${res.status}`);
+  const data = await res.json();
+  return data.text?.trim() || '';
+}
+
+async function geminiTranslate(text, fromLang, toLang) {
+  const langMap = { 'zh': '繁體中文', 'en': '英文', 'ja': '日文' };
+  const prompt = `你是醫療口譯員。將以下${langMap[fromLang]}翻譯成${langMap[toLang]}，只輸出翻譯，不加解釋。\n原文：${text}`;
+  try {
+    return await claudeCall(prompt);
+  } catch(e) {
+    console.error('翻譯失敗:', e.message);
+    return `⚠️ ${e.message}`;
+  }
+}
+
+async function geminiDoctorReply(patientText, patientLangCode) {
+  const langMap = { 'zh': '繁體中文', 'en': '英文' };
+  const prompt = `你是日本診所醫師。病患用${langMap[patientLangCode]}說：「${patientText}」。用日文說一句簡短的跟進問題（15字以內），只輸出日文。`;
+  try {
+    return await claudeCall(prompt);
+  } catch(e) {
+    console.error('醫師回應失敗:', e.message);
+    return 'ご症状を確認します。';
+  }
+}
+
+function startSTT() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('請用 Chrome 或 Safari'); return; }
+  recognition = new SR();
+  recognition.lang = patientLang === 'zh' ? 'zh-TW' : 'en-US';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+  finalTranscript = '';
+
+  // Show patient caption immediately
+  const patientLabel = patientLang === 'zh' ? '患者 · 中文 → 日文' : 'Patient · EN → JA';
+  showCaption(patientLabel, 'person-outline');
+  capOriginal.textContent = '…';
+  capTranslation.textContent = '';
+
+  recognition.onstart = () => console.log('✅ STT started');
+  recognition.onaudiostart = () => console.log('🎙 Audio input started');
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
     }
-    siriCtx.strokeStyle = wave.color;
-    siriCtx.lineWidth = 2.5;
-    siriCtx.stroke();
-  });
+    capOriginal.textContent = finalTranscript || interim || '…';
+  };
+
+  recognition.onerror = (e) => {
+    console.warn('Speech error:', e.error);
+    if (e.error === 'not-allowed') {
+      alert('請允許麥克風存取權限');
+      setState('idle');
+    } else if (e.error === 'no-speech') {
+      // 沒偵測到聲音，不要關掉，繼續等
+    } else if (e.error === 'aborted') {
+      // 被中斷，靜默處理
+    } else {
+      setState('idle');
+    }
+  };
+
+  recognition.onend = async () => {
+    const text = finalTranscript.trim();
+    if (!text) { setState('idle'); return; }
+    setState('processing');
+
+    // 1. 即時翻譯病患說的話 → 日文（給醫師看）
+    const jaText = await geminiTranslate(text, patientLang, 'ja');
+    await typeText(capTranslation, jaText, 24);
+
+    // 2. Gemini 生成醫師日文回應
+    setState('speaking');
+    await new Promise(r => setTimeout(r, 400));
+    const doctorJa = await geminiDoctorReply(text, patientLang);
+
+    // 3. 翻譯醫師回應 → 病患語言
+    const doctorTranslated = await geminiTranslate(doctorJa, 'ja', patientLang);
+
+    const doctorLabel = patientLang === 'zh' ? '醫師 · 日文 → 中文' : 'Doctor · JA → EN';
+    showCaption(doctorLabel, 'medical-outline');
+    await typeText(capOriginal, doctorJa, 40);
+    await new Promise(r => setTimeout(r, 150));
+    await typeText(capTranslation, doctorTranslated, 28);
+
+    speakText(doctorJa, 'ja-JP', () => setState('idle'));
+  };
+
+  recognition.start();
 }
 
-let siriT = 0;
-let siriAmpTarget = 8;
-let siriAmpCurrent = 8;
-function animateSiri() {
-  siriT += 0.04;
-  siriAmpCurrent += (siriAmpTarget - siriAmpCurrent) * 0.1;
-  drawSiriWave(siriT, siriAmpCurrent);
-  siriAnim = requestAnimationFrame(animateSiri);
+function speakText(text, lang, cb) {
+  if (!window.speechSynthesis) { cb?.(); return; }
+  speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang; utt.rate = 0.93; utt.pitch = 1.05;
+  const v = speechSynthesis.getVoices().find(v => v.lang.startsWith(lang.split('-')[0]) && v.localService);
+  if (v) utt.voice = v;
+  utt.onend = () => { ampTarget = 0.0; cb?.(); };
+  speechSynthesis.speak(utt);
 }
 
-function toggleSiri(btn) {
-  if (!siriRunning) {
-    siriRunning = true;
-    siriAmpTarget = 28;
-    animateSiri();
-    btn.textContent = '⏹ 停止';
-    btn.className = 'btn btn-stop';
+async function toggleMic() {
+  if (state === 'idle' || state === 'speaking') {
+    speechSynthesis.cancel();
+    setState('listening');
+    // 先啟動 STT，等 onstart 之後再初始化 analyser（避免搶麥克風）
+    startSTT();
+    // Analyser 延遲 800ms 再啟動
+    setTimeout(async () => {
+      if (state === 'listening' && !audioCtx) await startMicAnalyser();
+    }, 800);
+  } else if (state === 'listening') {
+    recognition?.stop();
+  }
+}
+
+// ============================================================
+// Loop
+// ============================================================
+function loop(ms) {
+  // Drive orb amplitude
+  if (state === 'listening' && analyser) {
+    const vol = getMicVolume();
+    ampTarget = Math.min(0.08 + vol * 4.5, 1.0);
+  } else if (state === 'speaking') {
+    ampTarget = 0.4 + Math.sin(ms * 0.003) * 0.25;
+  } else if (state === 'processing') {
+    ampTarget = 0.15 + Math.sin(ms * 0.002) * 0.08;
   } else {
-    siriRunning = false;
-    siriAmpTarget = 8;
-    setTimeout(() => { cancelAnimationFrame(siriAnim); drawSiriWave(siriT, 4); }, 800);
-    btn.textContent = '▶ 播放';
-    btn.className = 'btn btn-primary';
+    ampTarget = 0.0;
   }
-}
-drawSiriWave(0, 8);
+  renderOrb(ms);
 
-// ============ 2. BAR WAVEFORM ============
-const barsEl = document.getElementById('bars');
-const barCount = 28;
-let barsRunning = false;
-let barsAnim;
-const barEls = [];
-for (let i = 0; i < barCount; i++) {
-  const b = document.createElement('div');
-  b.className = 'bar';
-  b.style.height = '4px';
-  barsEl.appendChild(b);
-  barEls.push(b);
-}
-function animateBars() {
-  barEls.forEach((b, i) => {
-    const h = 4 + Math.random() * 60;
-    b.style.height = h + 'px';
-    b.style.opacity = 0.5 + (h / 64) * 0.5;
-  });
-  barsAnim = setTimeout(animateBars, 80);
-}
-function toggleBars(btn) {
-  if (!barsRunning) {
-    barsRunning = true;
-    animateBars();
-    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
+  // Drive waveform bars
+  if (state === 'listening' && analyser) {
+    // Real frequency data from mic
+    analyser.getByteFrequencyData(freqData);
+    wbars.forEach((b, i) => {
+      const idx = Math.floor(i / BAR_COUNT * freqData.length * 0.65);
+      const h = 3 + (freqData[idx] / 255) * 44;
+      b.style.height = h + 'px';
+      b.style.opacity = 0.4 + (h / 47) * 0.6;
+    });
+  } else if (state === 'speaking') {
+    // Smooth sine wave when AI speaks
+    wbars.forEach((b, i) => {
+      const h = 4 + Math.abs(Math.sin(ms * 0.003 + i * 0.35 + Math.sin(ms * 0.0015 + i * 0.15))) * 38;
+      b.style.height = h + 'px';
+      b.style.opacity = 0.5 + (h / 42) * 0.5;
+    });
+  } else if (state === 'processing') {
+    // Slow gentle pulse
+    wbars.forEach((b, i) => {
+      const h = 3 + Math.abs(Math.sin(ms * 0.0008 + i * 0.5)) * 14;
+      b.style.height = h + 'px';
+      b.style.opacity = '0.3';
+    });
   } else {
-    barsRunning = false;
-    clearTimeout(barsAnim);
-    barEls.forEach(b => { b.style.height = '4px'; });
-    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
+    // Idle: flat line with tiny breathing
+    wbars.forEach((b, i) => {
+      const h = 3 + Math.abs(Math.sin(ms * 0.0005 + i * 0.3)) * 2;
+      b.style.height = h + 'px';
+      b.style.opacity = '0.2';
+    });
   }
-}
 
-// ============ 3. ORB ============
-const orbEl = document.getElementById('orb');
-let orbRunning = false;
-function toggleOrb(btn) {
-  if (!orbRunning) {
-    orbRunning = true;
-    orbEl.classList.add('speaking');
-    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
-  } else {
-    orbRunning = false;
-    orbEl.classList.remove('speaking');
-    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
-  }
+  requestAnimationFrame(loop);
 }
-
-// ============ 4. PULSE ============
-const pulseDotEl = document.getElementById('pulseDot');
-let pulseRunning = false;
-function togglePulse(btn) {
-  if (!pulseRunning) {
-    pulseRunning = true;
-    pulseDotEl.classList.add('speaking');
-    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
-  } else {
-    pulseRunning = false;
-    pulseDotEl.classList.remove('speaking');
-    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
-  }
-}
-
-// ============ 5. THIN BARS (ElevenLabs) ============
-const thinBarsEl = document.getElementById('thinBars');
-const thinCount = 32;
-let thinRunning = false;
-let thinAnim;
-const thinEls = [];
-for (let i = 0; i < thinCount; i++) {
-  const b = document.createElement('div');
-  b.className = 'thin-bar';
-  thinBarsEl.appendChild(b);
-  thinEls.push(b);
-}
-let thinT = 0;
-function animateThin() {
-  thinT += 0.08;
-  thinEls.forEach((b, i) => {
-    const wave = Math.sin(thinT + i * 0.4) * 0.5 + 0.5;
-    const h = 3 + wave * 45;
-    b.style.height = h + 'px';
-  });
-  thinAnim = requestAnimationFrame(animateThin);
-}
-function toggleThin(btn) {
-  if (!thinRunning) {
-    thinRunning = true;
-    animateThin();
-    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
-  } else {
-    thinRunning = false;
-    cancelAnimationFrame(thinAnim);
-    thinEls.forEach(b => { b.style.height = '3px'; });
-    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
-  }
-}
-
-// ============ 6. CIRCLE WAVEFORM ============
-const circleCanvas = document.getElementById('circleCanvas');
-const circleCtx = circleCanvas.getContext('2d');
-let circleRunning = false;
-let circleAnim;
-let circleT = 0;
-let circleAmp = 0;
-function drawCircle(amp) {
-  const w = 120, h = 120, cx = 60, cy = 60, r = 35;
-  circleCtx.clearRect(0, 0, w, h);
-  // outer glow
-  if (amp > 2) {
-    const grad = circleCtx.createRadialGradient(cx, cy, r, cx, cy, r + amp + 10);
-    grad.addColorStop(0, 'rgba(0,113,227,0.3)');
-    grad.addColorStop(1, 'rgba(0,113,227,0)');
-    circleCtx.beginPath();
-    circleCtx.arc(cx, cy, r + amp + 10, 0, Math.PI * 2);
-    circleCtx.fillStyle = grad;
-    circleCtx.fill();
-  }
-  // waveform circle
-  const points = 80;
-  circleCtx.beginPath();
-  for (let i = 0; i <= points; i++) {
-    const angle = (i / points) * Math.PI * 2;
-    const noise = Math.sin(angle * 4 + circleT) * amp * 0.5
-                + Math.sin(angle * 7 + circleT * 1.5) * amp * 0.3;
-    const rr = r + noise;
-    const x = cx + Math.cos(angle) * rr;
-    const y = cy + Math.sin(angle) * rr;
-    i === 0 ? circleCtx.moveTo(x, y) : circleCtx.lineTo(x, y);
-  }
-  circleCtx.closePath();
-  circleCtx.strokeStyle = '#0071e3';
-  circleCtx.lineWidth = 2;
-  circleCtx.stroke();
-  circleCtx.fillStyle = 'rgba(0,113,227,0.08)';
-  circleCtx.fill();
-}
-function animateCircle() {
-  circleT += 0.05;
-  drawCircle(circleAmp);
-  circleAnim = requestAnimationFrame(animateCircle);
-}
-function toggleCircle(btn) {
-  if (!circleRunning) {
-    circleRunning = true;
-    circleAmp = 12;
-    animateCircle();
-    btn.textContent = '⏹ 停止'; btn.className = 'btn btn-stop';
-  } else {
-    circleRunning = false;
-    circleAmp = 0;
-    setTimeout(() => { cancelAnimationFrame(circleAnim); drawCircle(0); }, 500);
-    btn.textContent = '▶ 播放'; btn.className = 'btn btn-primary';
-  }
-}
-drawCircle(0);
+requestAnimationFrame(loop);
+setState('idle');
 </script>
 </body>
 </html>
